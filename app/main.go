@@ -50,11 +50,12 @@ func makeChroot(binaryFilePath string) error {
 	defer os.RemoveAll(tempDirPath)
 
 	// create a temp /dev/null file
-	nullFilePath := filepath.Join(tempDirPath, "dev", "null")
-	err = os.MkdirAll(filepath.Dir(nullFilePath), 0755)
+	nullFilePath := filepath.Join(tempDirPath, "dev/null")
+	err = os.MkdirAll(nullFilePath, 0755)
 	if err != nil {
 		log.Fatalf("Error creating temp /dev/null file: %v", err)
 	}
+	defer os.RemoveAll(filepath.Dir(nullFilePath))
 
 	// destination path for the binary file
 	destPath := filepath.Join(tempDirPath, binaryFilePath)
@@ -84,6 +85,8 @@ func makeChroot(binaryFilePath string) error {
 func main() {
 
 	command := os.Args[3]
+	err := makeChroot(command)
+
 	args := os.Args[4:len(os.Args)]
 
 	cmd := exec.Command(command, args...)
@@ -92,7 +95,7 @@ func main() {
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 
-	err := cmd.Run()
+	err = cmd.Run()
 
 	if err != nil {
 		// get the exit code from the child process

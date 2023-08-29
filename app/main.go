@@ -20,11 +20,19 @@ func main() {
 	// pipe the stderr to the parent process
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
+
 	err := cmd.Run()
 
 	if err != nil {
-		fmt.Printf("Err: %v", err)
-		os.Exit(1)
+		// get the exit code from the child process
+		// exit with the same code
+		if exitError, ok := err.(*exec.ExitError); ok {
+			os.Exit(exitError.ExitCode())
+		} else {
+			fmt.Println(err)
+			os.Exit(1)
+		}
+
 	}
 
 }

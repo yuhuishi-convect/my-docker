@@ -2,16 +2,86 @@ package main
 
 import (
 	"fmt"
+	"io"
 	// Uncomment this block to pass the first stage!
+	"log"
 	"os"
 	"os/exec"
+	"path/filepath"
+	"syscall"
 )
+
+func copyFile(srcPath, destPath string) error {
+	binSrc, err := os.Open(srcPath)
+	if err != nil {
+		return err
+	}
+	defer binSrc.Close()
+
+	binDest, err := os.Create(destPath)
+	if err != nil {
+		return err
+	}
+	defer binDest.Close()
+
+	// copy the file
+	if _, err = io.Copy(binDest, binSrc); err != nil {
+		return err
+	}
+
+	// set the permissions
+	if err = binDest.Chmod(0755); err != nil {
+		return err
+	}
+
+	return nil
+
+}
+
+func makeChroot(binaryFilePath string) error {
+
+	// create a new temp directory for the chroot
+	tempDirPath, err := os.MkdirTemp("", "my-docker")
+	if err != nil {
+		log.Fatalf("Error creating temp directory: %v", err)
+	}
+	// remove the temp directory when the program exits
+	defer os.RemoveAll(tempDirPath)
+
+	// create a temp /dev/null file
+	nullFilePath := filepath.Join(tempDirPath, "dev", "null")
+	err = os.MkdirAll(filepath.Dir(nullFilePath), 0755)
+	if err != nil {
+		log.Fatalf("Error creating temp /dev/null file: %v", err)
+	}
+
+	// destination path for the binary file
+	destPath := filepath.Join(tempDirPath, binaryFilePath)
+
+	// create the destination directory
+	err = os.MkdirAll(filepath.Dir(destPath), 0755)
+	if err != nil {
+		log.Fatalf("Error creating destination directory: %v", err)
+	}
+
+	// copy the binary file to the destination path
+	err = copyFile(binaryFilePath, destPath)
+	if err != nil {
+		log.Fatalf("Error copying file: %v", err)
+	}
+
+	// chroot to the temp directory
+	err = syscall.Chroot(tempDirPath)
+	if err != nil {
+		log.Fatalf("Error chrooting: %v", err)
+	}
+
+	return nil
+}
 
 // Usage: your_docker.sh run <image> <command> <arg1> <arg2> ...
 func main() {
 
-	// Uncomment this block to pass the first stage!
-	//
 	command := os.Args[3]
 	args := os.Args[4:len(os.Args)]
 

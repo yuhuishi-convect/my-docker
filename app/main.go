@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	// Uncomment this block to pass the first stage!
+	"io/ioutil"
 	"log"
 	"os"
 	"os/exec"
@@ -41,7 +42,7 @@ func copyFile(srcPath, destPath string) error {
 func makeChroot(binaryFilePath string) error {
 
 	// create a new temp directory for the chroot
-	tempDirPath, err := os.MkdirTemp("", "my-docker")
+	tempDirPath, err := ioutil.TempDir("", "my-docker")
 	if err != nil {
 		log.Fatalf("Error creating temp directory: %v", err)
 	}
